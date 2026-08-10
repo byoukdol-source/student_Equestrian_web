@@ -1,0 +1,10 @@
+# 학생승마웹사이트 - Netlify 설정
+# 이미 기존에 사이트에 netlify.toml이 있다면, 아래 [build]와 [functions.*] 블록만
+# 기존 파일에 합쳐서 넣어주세요 (파일을 통째로 덮어쓰지 말고 필요한 부분만 추가).
+
+[build]
+  functions = "netlify/functions"
+
+# refresh-winners-cache 함수를 5분마다 자동 실행 (크론 표현식: 분 시 일 월 요일)
+[functions."refresh-winners-cache"]
+  schedule = "*/5 * * * *"

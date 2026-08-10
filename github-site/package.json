@@ -1,0 +1,8 @@
+{
+  "name": "hakseungmo-winners-cache",
+  "private": true,
+  "description": "학생승마웹사이트 - 당첨확인 조회 캐싱용 Netlify 함수",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

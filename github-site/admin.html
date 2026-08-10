@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>학생승마 관리자</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --primary:#FEE500; --primary-dark:#191919; --bg:#F2F2F0; --text:#191919;
+    --muted:#8B8B8B; --line:#EAEAEA; --danger:#d64545;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif;background:var(--bg);color:var(--text);margin:0;padding:20px;}
+  .wrap{max-width:640px;margin:0 auto;}
+  h1{font-size:20px;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:24px;}
+  .card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .login-wrap{display:flex;justify-content:center;padding:40px 0;}
+  .venue-tag{display:inline-block;background:var(--primary);color:var(--primary-dark);font-weight:700;font-size:13px;padding:4px 10px;border-radius:8px;margin-bottom:10px;}
+  .tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .tabbtn{flex:1;padding:10px;border:none;border-radius:10px;background:#fff;color:var(--muted);font-weight:600;font-size:13px;cursor:pointer;}
+  .tabbtn.active{background:var(--primary-dark);color:#fff;}
+  label{display:block;font-size:13px;font-weight:600;margin:14px 0 4px;}
+  input[type=text], input[type=datetime-local], textarea, select{
+    width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:#fafafa;
+  }
+  textarea{min-height:70px;resize:vertical;}
+  .row2{display:flex;gap:8px;}
+  .row2 > div{flex:1;}
+  .btn{width:100%;padding:13px;border:none;border-radius:10px;background:var(--primary);color:var(--primary-dark);font-weight:800;font-size:15px;margin-top:20px;cursor:pointer;}
+  .btn:disabled{opacity:.5;}
+  .grade-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+  .grade-row input{flex:1;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th,td{border:1px solid var(--line);padding:6px;text-align:left;white-space:nowrap;}
+  th{background:#fafafa;position:sticky;top:0;}
+  .tablewrap{overflow-x:auto;max-height:60vh;}
+  .msg{font-size:13px;color:var(--danger);margin-top:10px;white-space:pre-wrap;}
+  .ok{color:#2b8a3e;}
+  .hidden{display:none !important;}
+  .small{font-size:12px;color:var(--muted);}
+  /* [2026-08-04 추가] 건별 삭제 / 전체 초기화 버튼 스타일 */
+  .danger-btn{color:var(--danger) !important;border:1px solid var(--danger);}
+  .danger-btn:hover{background:var(--danger);color:#fff !important;}
+  .row-del-btn{
+    font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--danger);
+    background:#fff;color:var(--danger);cursor:pointer;white-space:nowrap;
+  }
+  /* [2026-08-04 추가] 이미지 URL 입력 아래 실시간 미리보기 */
+  .img-preview-wrap{ margin:6px 0 4px; }
+  .img-preview{ max-height:90px; max-width:100%; border-radius:8px; display:block; }
+  .img-preview-msg{ color:var(--danger) !important; }
+  .row-del-btn:hover{background:var(--danger);color:#fff;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>학생승마 관리자 화면</h1>
+  <div class="sub">담당 승마장의 신청 목록 조회 및 안내 콘텐츠 수정</div>
+
+  <!-- [2026-08-05 추가] 카카오톡 등 메신저 인앱 브라우저에서는 구글 로그인 버튼이 뜨지 않기 때문에,
+       비밀번호 화면보다 먼저 안내 카드를 보여줍니다 (JS에서 감지해서 필요할 때만 보여짐). -->
+  <div id="inAppWarningCard" class="card hidden">
+    <div class="msg" style="color:var(--text);font-weight:700;font-size:14px;margin-top:0;">
+      지금 사용 중인 앱(카카오톡 등)의 내부 브라우저에서는 구글 로그인이 작동하지 않아요.
+    </div>
+    <div class="small" style="margin-top:8px;">
+      아래 순서대로 사파리(아이폰) 또는 크롬(안드로이드) 같은 기본 브라우저 앱으로 열어주세요.<br><br>
+      1. 화면 오른쪽 아래(또는 오른쪽 위) <b>···</b> 또는 <b>공유</b> 버튼을 눌러주세요.<br>
+      2. "다른 브라우저로 열기" 또는 "Safari로 열기"를 선택해주세요.<br>
+      (메뉴가 안 보이면 아래 버튼으로 주소를 복사한 뒤, 사파리/크롬 앱을 직접 열어 주소창에 붙여넣어 주세요.)
+    </div>
+    <button type="button" class="btn" id="copyAdminUrlBtn">관리자페이지 주소 복사하기</button>
+    <div id="copyAdminUrlMsg" class="msg ok" style="display:none;">주소를 복사했어요. 사파리/크롬 앱을 열어 주소창에 붙여넣어 주세요.</div>
+  </div>
+
+  <!-- [2026-08-04 추가] 구글 로그인 전에 먼저 확인하는 1차 비밀번호 화면 -->
+  <div id="pinCard" class="card">
+    <label>관리자 비밀번호</label>
+    <input type="password" id="pinInput" inputmode="numeric" placeholder="비밀번호를 입력하세요">
+    <button type="button" class="btn" id="pinSubmitBtn">확인</button>
+    <div id="pinMsg" class="msg"></div>
+  </div>
+
+  <!-- 로그인 전 -->
+  <div id="loginCard" class="card hidden">
+    <div id="g_id_onload"
+         data-client_id="398962798757-60eu2r66jvp42ps63mvh6q1p59u1b1eh.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse">
+    </div>
+    <div class="login-wrap">
+      <div class="g_id_signin" data-type="standard"></div>
+    </div>
+    <div id="loginMsg" class="msg"></div>
+  </div>
+
+  <!-- 로그인 후 -->
+  <div id="mainArea" class="hidden">
+    <div class="card">
+      <span class="venue-tag" id="venueTag"></span>
+      <div class="small" id="emailTag"></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tabbtn active" data-tab="config">설정 수정</button>
+      <button class="tabbtn" data-tab="insurance">보험가입 목록</button>
+      <button class="tabbtn" data-tab="pony">포니등급 목록</button>
+      <button class="tabbtn" data-tab="classtime">수업시간 목록</button>
+    </div>
+
+    <!-- 설정 수정 탭 -->
+    <div class="card" id="tab-config">
+      <label>인사문구</label>
+      <textarea id="cfg_greet"></textarea>
+
+      <div class="row2">
+        <div><label>운영시간</label><input type="text" id="cfg_hours"></div>
+        <div><label>휴무일</label><input type="text" id="cfg_off"></div>
+      </div>
+
+      <label>보험가입 첫 안내문구</label>
+      <input type="text" id="cfg_insuranceDesc">
+
+      <label>보험가입 오픈시간</label>
+      <select id="cfg_openMode">
+        <option value="open">항상 오픈</option>
+        <option value="tbd">오픈일 미정(TBD) - 무기한 잠금</option>
+        <option value="date">특정 날짜/시각에 오픈</option>
+      </select>
+      <div id="cfg_openDateWrap" class="hidden">
+        <input type="datetime-local" id="cfg_openDate">
+      </div>
+
+      <label>오픈 전 잠금화면 문구 - 오픈일 미정(TBD)일 때</label>
+      <input type="text" id="cfg_lockedTbdMessage" placeholder="예: 오픈 예정일은 아직 정해지지 않았습니다. 확정되는 대로 안내드릴게요.">
+      <label>오픈 전 잠금화면 문구 - 추가 안내 (한 줄에 하나씩)</label>
+      <textarea id="cfg_lockedMessage" placeholder="예: 수업시간은 입금순으로 진행합니다."></textarea>
+      <div class="small">'*'로 시작하는 줄은 방문자 화면에서 빨간색으로 강조되어 표시됩니다. 오픈일이 특정 날짜로 정해진 경우엔 위 첫 줄 문구 대신 "{날짜}부터 오픈됩니다."가 자동으로 표시되고, 이 추가 안내는 그 아래 그대로 표시됩니다.</div>
+      <div class="small">* 참고: 당첨확인 명단의 "구분" 값은 이제 학생승마(일반)/학생승마(생활)/학생승마(재활) 중 하나로 관리됩니다. 일반은 기존과 동일하게 보험가입+입금이 필요하고, 생활/재활은 전액지원 대상이라 방문자 화면의 보험가입 탭에 계좌 대신 "전액 지원" 문구가 자동으로 표시됩니다.</div>
+
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="cfg_classTimeBookingEnabled" style="width:auto;margin:0;">
+        <span>수업시간 선착순 실시간 선택 기능 켜기</span>
+      </label>
+      <textarea id="cfg_classTimeBookingSlots" placeholder="한 줄에 하나씩, '라벨,정원' 형식으로 입력하세요 (예: 화 3:00,4)"></textarea>
+      <div class="small">체크를 켜고 시간대를 한 줄에 하나씩 "라벨,정원" 형식으로 입력하면(예: 화 3:00,4 / 수 3:00,4), 보험가입정보 제출이 완료된 직후 방문자가 실시간 잔여좌석을 보면서 선착순으로 수업시간을 선택하는 화면으로 자동 이동합니다. 체크를 끄면(기본값) 지금까지와 동일하게 보험가입 제출만으로 끝나고, 수업시간은 승마장에서 별도로 안내합니다.</div>
+
+      <label>수업료 입금계좌</label>
+      <div class="row2">
+        <div><input type="text" id="cfg_pay_bank" placeholder="은행"></div>
+        <div><input type="text" id="cfg_pay_holder" placeholder="예금주"></div>
+      </div>
+      <div class="row2" style="margin-top:6px;">
+        <div><input type="text" id="cfg_pay_account" placeholder="계좌번호"></div>
+        <div><input type="text" id="cfg_pay_amount" placeholder="금액"></div>
+      </div>
+      <label>계좌 안내문구</label>
+      <textarea id="cfg_pay_desc"></textarea>
+
+      <label>포니등급 입금계좌</label>
+      <div class="row2">
+        <div><input type="text" id="cfg_pony_bank" placeholder="은행"></div>
+        <div><input type="text" id="cfg_pony_holder" placeholder="예금주"></div>
+      </div>
+      <div class="row2" style="margin-top:6px;">
+        <div><input type="text" id="cfg_pony_account" placeholder="계좌번호"></div>
+        <div><input type="text" id="cfg_pony_amount" placeholder="기본 금액"></div>
+      </div>
+
+      <label>포니등급 가격 (등급 / 금액)</label>
+      <div id="cfg_ponyPricing"></div>
+      <button type="button" class="tabbtn" id="addGradeBtn" style="margin-top:6px;">+ 등급 추가</button>
+
+      <!-- [2026-08-04 추가] 포니등급신청 잠금 -->
+      <label style="display:flex;align-items:center;gap:8px;margin-top:16px;">
+        <input type="checkbox" id="cfg_ponyLocked" style="width:auto;margin:0;">
+        <span>포니등급신청 잠금</span>
+      </label>
+      <div class="small">체크하면 방문자 화면의 포니등급신청 탭에 신청폼 대신 "접수 시작 준비 중입니다. 문의는 카카오채널로 부탁드립니다." 문구가 표시됩니다. (이미 신청을 마쳤거나 인증에 합격한 학생에게는 잠금과 무관하게 기존처럼 본인 상태가 그대로 보입니다.)</div>
+
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="cfg_scheduleEnabled" style="width:auto;margin:0;">
+        <span>승마장안내 상단에 '일정확인' 버튼 켜기</span>
+      </label>
+      <div class="row2">
+        <div><label>일정확인 - 안내문구 (한 줄에 하나씩)</label><textarea id="cfg_scheduleText" placeholder="예: 3월 개강&#10;7월 여름방학 휴강"></textarea></div>
+        <div><label>일정확인 - 이미지 URL</label><input type="text" id="cfg_scheduleImage" placeholder="연간일정 이미지 링크 (선택)"></div>
+      </div>
+      <div class="img-preview-wrap">
+        <img id="cfg_scheduleImage_preview" class="img-preview" style="display:none;">
+        <div id="cfg_scheduleImage_previewMsg" class="small img-preview-msg" style="display:none;"></div>
+      </div>
+      <div class="small">체크를 켜고 안내문구/이미지 중 하나라도 입력하면, 방문자 화면 승마장안내 맨 위 운영시간 옆에 빨간색 '일정확인' 버튼이 나타나고, 누르면 여기 입력한 내용이 팝업으로 보여집니다.</div>
+
+      <label>승마장 안내 - 수업방법</label>
+      <textarea id="cfg_guide_class"></textarea>
+      <label>수업방법 - 이미지 URL (선택)</label>
+      <input type="text" id="cfg_guide_classImage" placeholder="이미지 링크">
+      <div class="img-preview-wrap">
+        <img id="cfg_guide_classImage_preview" class="img-preview" style="display:none;">
+        <div id="cfg_guide_classImage_previewMsg" class="small img-preview-msg" style="display:none;"></div>
+      </div>
+
+      <!-- [2026-08-05 추가] 학생승마(재활) 전용 수업방법 - 비워두면 방문자 화면에서 위 일반 수업방법이 그대로 보입니다. -->
+      <label>승마장 안내 - 수업방법 (재활 전용, 비워두면 일반과 동일)</label>
+      <textarea id="cfg_guide_classRehab"></textarea>
+      <label>수업방법(재활) - 이미지 URL (선택)</label>
+      <input type="text" id="cfg_guide_classRehabImage" placeholder="이미지 링크">
+      <div class="img-preview-wrap">
+        <img id="cfg_guide_classRehabImage_preview" class="img-preview" style="display:none;">
+        <div id="cfg_guide_classRehabImage_previewMsg" class="small img-preview-msg" style="display:none;"></div>
+      </div>
+
+      <label>승마장 안내 - 출석·보강</label>
+      <textarea id="cfg_guide_attend"></textarea>
+      <label>출석·보강 - 이미지 URL (선택)</label>
+      <input type="text" id="cfg_guide_attendImage" placeholder="이미지 링크">
+      <div class="img-preview-wrap">
+        <img id="cfg_guide_attendImage_preview" class="img-preview" style="display:none;">
+        <div id="cfg_guide_attendImage_previewMsg" class="small img-preview-msg" style="display:none;"></div>
+      </div>
+
+      <!-- [2026-08-05 추가] 학생승마(재활) 전용 출석·보강 - 비워두면 방문자 화면에서 위 일반 출석·보강이 그대로 보입니다. -->
+      <label>승마장 안내 - 출석·보강 (재활 전용, 비워두면 일반과 동일)</label>
+      <textarea id="cfg_guide_attendRehab"></textarea>
+      <label>출석·보강(재활) - 이미지 URL (선택)</label>
+      <input type="text" id="cfg_guide_attendRehabImage" placeholder="이미지 링크">
+      <div class="img-preview-wrap">
+        <img id="cfg_guide_attendRehabImage_preview" class="img-preview" style="display:none;">
+        <div id="cfg_guide_attendRehabImage_previewMsg" class="small img-preview-msg" style="display:none;"></div>
+      </div>
+      <div class="small">위 재활 전용 칸은 학생승마(재활)로 분류된 학생에게만 보입니다. 비워두면 재활 학생에게도 일반 수업방법·출석·보강 내용이 그대로 보여요.</div>
+
+      <label>승마장 안내 - 주의사항</label>
+      <textarea id="cfg_guide_notice"></textarea>
+      <label>주의사항 - 이미지 URL (선택)</label>
+      <input type="text" id="cfg_guide_noticeImage" placeholder="이미지 링크">
+      <div class="img-preview-wrap">
+        <img id="cfg_guide_noticeImage_preview" class="img-preview" style="display:none;">
+        <div id="cfg_guide_noticeImage_previewMsg" class="small img-preview-msg" style="display:none;"></div>
+      </div>
+      <div class="small">이미지는 파일 업로드가 아니라 이미지가 올라가 있는 링크(URL)를 붙여넣는 방식입니다. 구글 드라이브에 이미지를 올린 뒤 "링크가 있는 모든 사용자"로 공유 설정하고, 공유 링크(예: .../file/d/파일ID/view)를 그대로 붙여넣으시면 미리보기가 뜨는 링크로 자동 변환해서 저장합니다.</div>
+
+      <label>문의 화면 - 승마장 연락처</label>
+      <div class="row2">
+        <div><input type="text" id="cfg_contact_phone" placeholder="전화번호 (예: 010-1234-5678)"></div>
+        <div><input type="text" id="cfg_contact_kakao" placeholder="카카오채널 링크"></div>
+      </div>
+      <div class="row2" style="margin-top:6px;">
+        <div><input type="text" id="cfg_contact_kakaoNote" placeholder="카카오채널 안내문구 (예: 응답이 제일 빠릅니다)"></div>
+        <div><input type="text" id="cfg_contact_address" placeholder="오시는 길 주소 (예: 경기도 시흥시 마전로 342)"></div>
+      </div>
+      <div class="small">카카오채널을 비워두면 방문자 화면에는 해당 줄이 "준비중"으로 표시됩니다. 오시는 길은 지도 링크 대신 주소를 그대로 텍스트로 보여줍니다 — 비워두면 "준비중"으로 표시됩니다. (참고: 문의 화면의 'KRA(마사회)' 박스와 시청 관련 안내는 2026-08-04부터 고정 문구로 바뀌어 더 이상 여기서 설정하지 않습니다.)</div>
+
+      <button class="btn" id="saveConfigBtn">설정 저장</button>
+      <div id="configMsg" class="msg"></div>
+      <div class="small" style="margin-top:10px;">
+        * 여기서 저장한 내용은 방문자가 다음에 페이지를 열거나 새로고침할 때 자동으로 반영됩니다.
+      </div>
+    </div>
+
+    <!-- 보험가입 목록 탭 -->
+    <div class="card hidden" id="tab-insurance">
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button type="button" class="tabbtn" id="downloadInsuranceBtn">⬇ CSV 다운로드</button>
+        <button type="button" class="tabbtn danger-btn" id="clearInsuranceBtn">🗑 전체 초기화</button>
+      </div>
+      <div class="tablewrap"><table id="table-insurance"></table></div>
+    </div>
+
+    <!-- 포니등급 목록 탭 -->
+    <div class="card hidden" id="tab-pony">
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button type="button" class="tabbtn" id="downloadPonyBtn">⬇ CSV 다운로드</button>
+        <button type="button" class="tabbtn danger-btn" id="clearPonyBtn">🗑 전체 초기화</button>
+      </div>
+      <div class="tablewrap"><table id="table-pony"></table></div>
+    </div>
+
+    <!-- [2026-08-04 추가] 수업시간 목록 탭 -->
+    <div class="card hidden" id="tab-classtime">
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button type="button" class="tabbtn" id="downloadClassTimeBtn">⬇ CSV 다운로드</button>
+        <button type="button" class="tabbtn danger-btn" id="clearClassTimeBtn">🗑 전체 초기화</button>
+      </div>
+      <div class="tablewrap"><table id="table-classtime"></table></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== 설정: 승마장별 관리자 백엔드 주소 =====
+  // 시흥_admin.gs를 배포한 뒤 나오는 웹 앱 URL을 여기에 넣어주세요.
+  var VENUE_ADMIN_URLS = {
+    siheung: 'https://script.google.com/macros/s/AKfycbyxEd3BGsZATUIXbMkn6miTeeo9FMSLFTYHhd0UfXS3jgkF4jJFaU7Fe3brfVu73W1SgA/exec',
+    world: 'https://script.google.com/macros/s/AKfycbzBDa_GwlV0tSniao5C0iMPWFuf5RrdJDpBFdx9auYT4hU0DDdVfeV673-T7c1uevwg/exec',
+    cheongchowon: ''
+  };
+
+  // 운영자 라우팅(whichVenue)을 처리하는 주소 - checkWinner_doGet.gs를 배포한 주소와 같습니다.
+  var ROUTING_URL = 'https://script.google.com/macros/s/AKfycbwmsRyKwjilGw1K1a16JdRqKyu4hjgOZMUG2teHs3XGOTMjvyiTShIdwjoenEZcGBHyEQ/exec';
+
+  var VENUE_NAMES = { siheung: '시흥승마힐링체험장', world: '월드승마학교', cheongchowon: '청초원승마장' };
+
+  // [2026-08-04 추가] 구글 로그인 화면이 뜨기 전에 먼저 확인하는 1차 비밀번호(기본값 '0000').
+  // 주의: 이 값은 코드(페이지 소스)에 그대로 들어있어서 진짜 보안장치는 아니고, 아무나 실수로
+  // 또는 우연히 관리자 페이지에 들어오는 걸 막는 가벼운 "1차 문" 역할입니다. 실제 권한 확인은
+  // 그 다음 단계인 구글 로그인 + whichVenue 라우팅에서 이뤄집니다. 비밀번호를 바꾸고 싶으면
+  // 아래 값만 바꾸면 됩니다.
+  var ADMIN_FIRST_PIN = '0000';
+
+  // [2026-08-05 추가] 카카오톡/인스타그램/페이스북/라인 등 메신저·SNS 앱의 "인앱 브라우저"는
+  // 구글이 보안상 로그인을 차단해서, 비밀번호를 맞게 입력해도 그 다음 구글 로그인 버튼이
+  // 아예 뜨지 않거나 눌러도 반응이 없습니다. User-Agent로 대표적인 인앱 브라우저를 감지해서,
+  // 이 경우엔 비밀번호 화면 대신 "기본 브라우저로 열어주세요" 안내를 먼저 보여줍니다.
+  function isInAppBrowser(){
+    var ua = navigator.userAgent || '';
+    return /KAKAOTALK|Instagram|FBAN|FBAV|NAVER\(inapp/i.test(ua) || /\bLine\//i.test(ua);
+  }
+
+  (function(){
+    if(isInAppBrowser()){
+      document.getElementById('pinCard').classList.add('hidden');
+      document.getElementById('inAppWarningCard').classList.remove('hidden');
+      var copyBtn = document.getElementById('copyAdminUrlBtn');
+      copyBtn.addEventListener('click', function(){
+        var url = window.location.href;
+        var msg = document.getElementById('copyAdminUrlMsg');
+        function showCopied(){ msg.style.display = 'block'; }
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(url).then(showCopied).catch(function(){
+            window.prompt('아래 주소를 길게 눌러 복사해주세요', url);
+          });
+        } else {
+          window.prompt('아래 주소를 길게 눌러 복사해주세요', url);
+        }
+      });
+      return; // 인앱 브라우저에서는 비밀번호 입력 로직을 아예 연결하지 않음
+    }
+
+    var pinInput = document.getElementById('pinInput');
+    var pinBtn = document.getElementById('pinSubmitBtn');
+    var pinMsg = document.getElementById('pinMsg');
+
+    function checkAdminPin(){
+      if(pinInput.value === ADMIN_FIRST_PIN){
+        document.getElementById('pinCard').classList.add('hidden');
+        document.getElementById('loginCard').classList.remove('hidden');
+      } else {
+        pinMsg.textContent = '비밀번호가 올바르지 않습니다.';
+      }
+    }
+
+    pinBtn.addEventListener('click', checkAdminPin);
+    pinInput.addEventListener('keydown', function(e){
+      if(e.key === 'Enter') checkAdminPin();
+    });
+  })();
+
+  // [2026-08-04 추가] rows: CSV 다운로드 시 다시 서버에 요청하지 않고 화면에 이미 불러온
+  // 최신 신청 목록을 그대로 재사용하기 위해 저장해둡니다.
+  // [2026-08-05 추가] configLoaded: 설정을 서버에서 한 번이라도 정상적으로 불러왔는지 표시.
+  // 이 값이 false인 상태(즉, 로딩에 실패해서 화면이 빈 값인 상태)에서 실수로 "설정 저장"을 누르면
+  // 그 빈 값이 그대로 저장되어 기존 설정을 덮어써버릴 수 있어서, 저장 버튼 쪽에서 이 값을 확인합니다.
+  var state = { idToken: null, venueKey: null, adminUrl: null, config: null, configLoaded: false, rows: { insurance: [], pony: [], classtime: [] } };
+
+  // [2026-08-04 추가] 구글 드라이브 "공유" 링크(.../file/d/파일ID/view, .../open?id=파일ID 등)를
+  // <img> 태그로 바로 보여줄 수 있는 링크로 자동 변환합니다. 드라이브 링크가 아니면 입력한 그대로 둡니다.
+  function normalizeImageUrl(url){
+    var u = String(url || '').trim();
+    if(!u) return '';
+    if(u.indexOf('drive.google.com') === -1) return u;
+    var m = u.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if(!m) m = u.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if(!m) return u;
+    return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1600';
+  }
+
+  // 이미지 URL 입력칸 바로 아래에 실시간으로 미리보기를 보여줍니다 (링크가 잘못됐는지 저장 전에 바로 확인 가능).
+  function updateImagePreview(inputId){
+    var input = document.getElementById(inputId);
+    var img = document.getElementById(inputId + '_preview');
+    var msg = document.getElementById(inputId + '_previewMsg');
+    if(!input || !img || !msg) return;
+    var raw = input.value.trim();
+    if(!raw){
+      img.style.display = 'none';
+      msg.style.display = 'none';
+      return;
+    }
+    var url = normalizeImageUrl(raw);
+    img.onload = function(){ img.style.display = 'block'; msg.style.display = 'none'; };
+    img.onerror = function(){
+      img.style.display = 'none';
+      msg.style.display = 'block';
+      msg.textContent = '이미지를 불러올 수 없어요. 링크(공유 설정 포함)를 다시 확인해주세요.';
+    };
+    img.src = url;
+  }
+
+  var IMAGE_URL_FIELD_IDS = ['cfg_scheduleImage', 'cfg_guide_classImage', 'cfg_guide_attendImage', 'cfg_guide_noticeImage', 'cfg_guide_classRehabImage', 'cfg_guide_attendRehabImage'];
+  IMAGE_URL_FIELD_IDS.forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.addEventListener('input', function(){ updateImagePreview(id); });
+  });
+
+  function parseJwt(token){
+    try{
+      var base64Url = token.split('.')[1];
+      var base64 = base64Url.replace(/-/g,'+').replace(/_/g,'/');
+      var jsonPayload = decodeURIComponent(
+        atob(base64).split('').map(function(c){ return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join('')
+      );
+      return JSON.parse(jsonPayload);
+    }catch(e){ return null; }
+  }
+
+  function postForm(url, params){
+    var body = new URLSearchParams();
+    Object.keys(params).forEach(function(k){ body.append(k, params[k]); });
+    return fetch(url, { method:'POST', body: body })
+      .then(function(res){ return res.json(); });
+  }
+
+  function delay(ms){ return new Promise(function(resolve){ setTimeout(resolve, ms); }); }
+
+  // [2026-08-05 추가] 로그인 직후 설정/신청목록을 처음 불러올 때, 한동안 쉬고 있던 앱스스크립트가
+  // "콜드 스타트"로 응답이 느리거나 일시적으로 실패하는 경우가 있습니다(그래서 다시 로그인해야
+  // 겨우 정상적으로 보이던 문제). 실패하면 바로 빈 화면을 보여주는 대신, 잠깐 기다렸다가
+  // 자동으로 몇 번 더 시도합니다.
+  function postFormWithRetry(url, params, retries, delayMs){
+    if(retries === undefined) retries = 2;
+    if(delayMs === undefined) delayMs = 1500;
+    return postForm(url, params).then(function(data){
+      if(data && data.ok === false && retries > 0){
+        return delay(delayMs).then(function(){ return postFormWithRetry(url, params, retries - 1, delayMs); });
+      }
+      return data;
+    }).catch(function(err){
+      if(retries > 0){
+        return delay(delayMs).then(function(){ return postFormWithRetry(url, params, retries - 1, delayMs); });
+      }
+      throw err;
+    });
+  }
+
+  function handleCredentialResponse(response){
+    state.idToken = response.credential;
+    var loginMsg = document.getElementById('loginMsg');
+    loginMsg.textContent = '확인 중...';
+    loginMsg.className = 'msg';
+
+    postForm(ROUTING_URL, { action:'whichVenue', idToken: state.idToken })
+      .then(function(data){
+        if(!data.ok){
+          loginMsg.textContent = data.error || '권한 확인에 실패했습니다.';
+          return;
+        }
+        state.venueKey = data.venueKey;
+        var adminUrl = VENUE_ADMIN_URLS[state.venueKey];
+        if(!adminUrl){
+          loginMsg.textContent = '"' + (VENUE_NAMES[state.venueKey] || state.venueKey) + '"은(는) 아직 관리자 시스템이 준비되지 않았어요.';
+          return;
+        }
+        state.adminUrl = adminUrl;
+        document.getElementById('loginCard').classList.add('hidden');
+        document.getElementById('mainArea').classList.remove('hidden');
+        document.getElementById('venueTag').textContent = VENUE_NAMES[state.venueKey] || state.venueKey;
+        document.getElementById('emailTag').textContent = data.email;
+        loadConfig();
+        loadSubmissions('insurance');
+        loadSubmissions('pony');
+        loadSubmissions('classtime');
+      })
+      .catch(function(err){
+        loginMsg.textContent = '통신 오류: ' + err;
+      });
+  }
+
+  // ===== 탭 전환 =====
+  document.querySelectorAll('.tabbtn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.tabbtn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      ['config','insurance','pony','classtime'].forEach(function(t){
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== btn.dataset.tab);
+      });
+    });
+  });
+
+  // ===== 설정 불러오기 =====
+  // [2026-08-05 변경] 콜드 스타트로 인한 일시적 실패에 자동으로 재시도하도록 postFormWithRetry 사용.
+  // 그래도 실패하면 "다시 로그인" 대신 눌러서 바로 재시도할 수 있는 버튼을 보여줍니다.
+  function loadConfig(){
+    var msg = document.getElementById('configMsg');
+    msg.textContent = '설정을 불러오는 중...';
+    msg.className = 'msg';
+    postFormWithRetry(state.adminUrl, { action:'adminGetConfig', idToken: state.idToken })
+      .then(function(data){
+        if(!data.ok){
+          msg.innerHTML = (data.error || '설정을 불러오지 못했습니다.') + ' <button type="button" class="row-del-btn" onclick="loadConfig()">다시 시도</button>';
+          return;
+        }
+        msg.textContent = '';
+        state.config = data.config;
+        state.configLoaded = true;
+        fillConfigForm(data.config);
+      })
+      .catch(function(err){
+        msg.innerHTML = '통신 오류: ' + err + ' <button type="button" class="row-del-btn" onclick="loadConfig()">다시 시도</button>';
+      });
+  }
+
+  function fillConfigForm(cfg){
+    document.getElementById('cfg_greet').value = cfg.greet || '';
+    document.getElementById('cfg_hours').value = cfg.hours || '';
+    document.getElementById('cfg_off').value = cfg.off || '';
+    document.getElementById('cfg_insuranceDesc').value = cfg.insuranceDesc || '';
+
+    var openMode = 'open';
+    if(cfg.insuranceOpenAt === 'TBD') openMode = 'tbd';
+    else if(cfg.insuranceOpenAt) openMode = 'date';
+    document.getElementById('cfg_openMode').value = openMode;
+    document.getElementById('cfg_openDateWrap').classList.toggle('hidden', openMode !== 'date');
+    if(openMode === 'date'){
+      document.getElementById('cfg_openDate').value = cfg.insuranceOpenAt.slice(0,16);
+    }
+
+    document.getElementById('cfg_lockedTbdMessage').value = cfg.insuranceLockedTbdMessage || '';
+    document.getElementById('cfg_lockedMessage').value = cfg.insuranceLockedMessage || '';
+
+    var pay = cfg.payment || {};
+    document.getElementById('cfg_pay_bank').value = pay.bank || '';
+    document.getElementById('cfg_pay_holder').value = pay.holder || '';
+    document.getElementById('cfg_pay_account').value = pay.account || '';
+    document.getElementById('cfg_pay_amount').value = pay.amount || '';
+    document.getElementById('cfg_pay_desc').value = pay.desc || '';
+
+    var pony = cfg.ponyAccount || {};
+    document.getElementById('cfg_pony_bank').value = pony.bank || '';
+    document.getElementById('cfg_pony_holder').value = pony.holder || '';
+    document.getElementById('cfg_pony_account').value = pony.account || '';
+    document.getElementById('cfg_pony_amount').value = pony.amount || '';
+
+    renderPonyPricing(cfg.ponyPricing || []);
+
+    document.getElementById('cfg_ponyLocked').checked = !!cfg.ponyLocked;
+
+    var classTimeBookingCfg = cfg.classTimeBooking || {};
+    document.getElementById('cfg_classTimeBookingEnabled').checked = !!classTimeBookingCfg.enabled;
+    document.getElementById('cfg_classTimeBookingSlots').value = classTimeBookingCfg.slots || '';
+
+    var schedule = cfg.schedule || {};
+    document.getElementById('cfg_scheduleEnabled').checked = !!schedule.enabled;
+    document.getElementById('cfg_scheduleText').value = schedule.text || '';
+    document.getElementById('cfg_scheduleImage').value = schedule.image || '';
+
+    var guide = cfg.guide || {};
+    document.getElementById('cfg_guide_class').value = guide.class || '';
+    document.getElementById('cfg_guide_classImage').value = guide.classImage || '';
+    // [2026-08-05 추가] 재활 전용 수업방법/출석·보강
+    document.getElementById('cfg_guide_classRehab').value = guide.classRehab || '';
+    document.getElementById('cfg_guide_classRehabImage').value = guide.classRehabImage || '';
+    document.getElementById('cfg_guide_attend').value = guide.attend || '';
+    document.getElementById('cfg_guide_attendImage').value = guide.attendImage || '';
+    document.getElementById('cfg_guide_attendRehab').value = guide.attendRehab || '';
+    document.getElementById('cfg_guide_attendRehabImage').value = guide.attendRehabImage || '';
+    document.getElementById('cfg_guide_notice').value = guide.notice || '';
+    document.getElementById('cfg_guide_noticeImage').value = guide.noticeImage || '';
+
+    IMAGE_URL_FIELD_IDS.forEach(function(id){ updateImagePreview(id); });
+
+    var contact = cfg.contact || {};
+    document.getElementById('cfg_contact_phone').value = contact.phone || '';
+    document.getElementById('cfg_contact_kakao').value = contact.kakao || '';
+    document.getElementById('cfg_contact_kakaoNote').value = contact.kakaoNote || '';
+    document.getElementById('cfg_contact_address').value = contact.address || '';
+  }
+
+  function renderPonyPricing(list){
+    var wrap = document.getElementById('cfg_ponyPricing');
+    wrap.innerHTML = '';
+    list.forEach(function(item){
+      addGradeRow(item.grade, item.amount);
+    });
+    if(list.length === 0) addGradeRow('', '');
+  }
+
+  function addGradeRow(grade, amount){
+    var wrap = document.getElementById('cfg_ponyPricing');
+    var row = document.createElement('div');
+    row.className = 'grade-row';
+    row.innerHTML =
+      '<input type="text" class="grade-name" placeholder="등급 (예: 3등급)" value="' + (grade || '').replace(/"/g,'&quot;') + '">' +
+      '<input type="text" class="grade-amount" placeholder="금액 (예: 20,000원)" value="' + (amount || '').replace(/"/g,'&quot;') + '">' +
+      '<button type="button" class="tabbtn" style="flex:0 0 auto;">삭제</button>';
+    row.querySelector('button').addEventListener('click', function(){ row.remove(); });
+    wrap.appendChild(row);
+  }
+  document.getElementById('addGradeBtn').addEventListener('click', function(){ addGradeRow('',''); });
+
+  document.getElementById('cfg_openMode').addEventListener('change', function(){
+    document.getElementById('cfg_openDateWrap').classList.toggle('hidden', this.value !== 'date');
+  });
+
+  // ===== 설정 저장 =====
+  document.getElementById('saveConfigBtn').addEventListener('click', function(){
+    // [2026-08-05 추가] 설정을 서버에서 정상적으로 한 번도 불러오지 못한 상태(화면이 빈 값)에서
+    // 저장을 누르면, 그 빈 값이 그대로 저장되어 기존 설정(계좌번호, 안내문구 등)이 통째로
+    // 사라질 수 있습니다. 이 경우엔 한 번 더 확인을 받습니다.
+    if(!state.configLoaded){
+      var proceed = window.confirm(
+        '아직 기존 설정을 정상적으로 불러오지 못했어요.\n' +
+        '이 상태에서 저장하면 지금 화면에 보이는 빈 값이 그대로 저장되어,\n' +
+        '기존에 저장해둔 안내문구·계좌번호 등이 사라질 수 있습니다.\n\n' +
+        '그래도 저장하시겠어요? (취소를 누르고 "다시 시도"로 먼저 설정을 불러오는 걸 권장합니다)'
+      );
+      if(!proceed) return;
+    }
+    var btn = this;
+    var openMode = document.getElementById('cfg_openMode').value;
+    var insuranceOpenAt = '';
+    if(openMode === 'tbd') insuranceOpenAt = 'TBD';
+    else if(openMode === 'date') insuranceOpenAt = document.getElementById('cfg_openDate').value;
+
+    var ponyPricing = [];
+    document.querySelectorAll('#cfg_ponyPricing .grade-row').forEach(function(row){
+      var g = row.querySelector('.grade-name').value.trim();
+      var a = row.querySelector('.grade-amount').value.trim();
+      if(g || a) ponyPricing.push({ grade: g, amount: a });
+    });
+
+    var cfg = {
+      greet: document.getElementById('cfg_greet').value,
+      hours: document.getElementById('cfg_hours').value,
+      off: document.getElementById('cfg_off').value,
+      insuranceDesc: document.getElementById('cfg_insuranceDesc').value,
+      insuranceOpenAt: insuranceOpenAt,
+      insuranceLockedTbdMessage: document.getElementById('cfg_lockedTbdMessage').value,
+      insuranceLockedMessage: document.getElementById('cfg_lockedMessage').value,
+      payment: {
+        bank: document.getElementById('cfg_pay_bank').value,
+        holder: document.getElementById('cfg_pay_holder').value,
+        account: document.getElementById('cfg_pay_account').value,
+        amount: document.getElementById('cfg_pay_amount').value,
+        desc: document.getElementById('cfg_pay_desc').value
+      },
+      ponyAccount: {
+        bank: document.getElementById('cfg_pony_bank').value,
+        holder: document.getElementById('cfg_pony_holder').value,
+        account: document.getElementById('cfg_pony_account').value,
+        amount: document.getElementById('cfg_pony_amount').value
+      },
+      ponyPricing: ponyPricing,
+      ponyLocked: document.getElementById('cfg_ponyLocked').checked,
+      classTimeBooking: {
+        enabled: document.getElementById('cfg_classTimeBookingEnabled').checked,
+        slots: document.getElementById('cfg_classTimeBookingSlots').value
+      },
+      guide: {
+        class: document.getElementById('cfg_guide_class').value,
+        classImage: normalizeImageUrl(document.getElementById('cfg_guide_classImage').value),
+        // [2026-08-05 추가] 재활 전용 수업방법/출석·보강
+        classRehab: document.getElementById('cfg_guide_classRehab').value,
+        classRehabImage: normalizeImageUrl(document.getElementById('cfg_guide_classRehabImage').value),
+        attend: document.getElementById('cfg_guide_attend').value,
+        attendImage: normalizeImageUrl(document.getElementById('cfg_guide_attendImage').value),
+        attendRehab: document.getElementById('cfg_guide_attendRehab').value,
+        attendRehabImage: normalizeImageUrl(document.getElementById('cfg_guide_attendRehabImage').value),
+        notice: document.getElementById('cfg_guide_notice').value,
+        noticeImage: normalizeImageUrl(document.getElementById('cfg_guide_noticeImage').value)
+      },
+      schedule: {
+        enabled: document.getElementById('cfg_scheduleEnabled').checked,
+        text: document.getElementById('cfg_scheduleText').value,
+        image: normalizeImageUrl(document.getElementById('cfg_scheduleImage').value)
+      },
+      contact: {
+        phone: document.getElementById('cfg_contact_phone').value,
+        kakao: document.getElementById('cfg_contact_kakao').value,
+        kakaoNote: document.getElementById('cfg_contact_kakaoNote').value,
+        address: document.getElementById('cfg_contact_address').value
+      }
+    };
+
+    btn.disabled = true; btn.textContent = '저장 중...';
+    postForm(state.adminUrl, { action:'adminUpdateConfig', idToken: state.idToken, configJson: JSON.stringify(cfg) })
+      .then(function(data){
+        var msg = document.getElementById('configMsg');
+        if(data.ok){ msg.textContent = '저장되었습니다.'; msg.classList.add('ok'); }
+        else { msg.textContent = data.error; msg.classList.remove('ok'); }
+      })
+      .catch(function(err){
+        document.getElementById('configMsg').textContent = '통신 오류: ' + err;
+      })
+      .finally(function(){ btn.disabled = false; btn.textContent = '설정 저장'; });
+  });
+
+  // ===== 신청 목록 =====
+  // [2026-08-05 변경] 콜드 스타트로 인한 일시적 실패에 자동으로 재시도하도록 postFormWithRetry 사용.
+  function loadSubmissions(type){
+    var table = document.getElementById('table-' + type);
+    table.innerHTML = '<tr><td>불러오는 중...</td></tr>';
+    postFormWithRetry(state.adminUrl, { action:'adminGetSubmissions', idToken: state.idToken, type: type })
+      .then(function(data){
+        if(!data.ok){
+          table.innerHTML = '<tr><td>' + (data.error || '목록을 불러오지 못했습니다.') + ' <button type="button" class="row-del-btn" onclick="loadSubmissions(\'' + type + '\')">다시 시도</button></td></tr>';
+          return;
+        }
+        state.rows[type] = data.rows || [];
+        renderTable(table, data.rows, type);
+      })
+      .catch(function(err){
+        table.innerHTML = '<tr><td>통신 오류: ' + err + ' <button type="button" class="row-del-btn" onclick="loadSubmissions(\'' + type + '\')">다시 시도</button></td></tr>';
+      });
+  }
+
+  // [2026-08-04 추가] 구글시트에서 넘어오는 날짜/시각 값이 "1980-08-31T15:00:00.000Z"처럼 길게
+  // 표시되는 문제를 고침. 이 값들은 UTC 기준이라 그대로 자르면 자정 근처 날짜가 실제 한국 날짜보다
+  // 하루 앞서 보일 수 있어서, 한국시간(KST, UTC+9)으로 정확히 환산한 뒤 짧게 표시합니다.
+  // 컬럼 이름에 "생년월일"이 들어있으면 날짜만(YYYY-MM-DD), 그 외(예: 제출일시)는
+  // "YYYY-MM-DD HH:mm"으로 표시합니다.
+  function formatDateDisplay(header, value){
+    if(typeof value !== 'string') return value;
+    var m = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+    if(!m) return value;
+    var utcMs = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+    var kst = new Date(utcMs + 9 * 60 * 60 * 1000);
+    var yyyy = kst.getUTCFullYear();
+    var mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
+    var dd = String(kst.getUTCDate()).padStart(2, '0');
+    if (String(header).indexOf('생년월일') !== -1) {
+      return yyyy + '-' + mm + '-' + dd;
+    }
+    var hh = String(kst.getUTCHours()).padStart(2, '0');
+    var mi = String(kst.getUTCMinutes()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;
+  }
+
+  // [2026-08-04 추가] '_'로 시작하는 키(예: _row, 삭제용 내부 행 번호)는 화면에 노출하지 않도록 걸러냄.
+  function displayableHeaders(row){
+    return Object.keys(row).filter(function(h){ return h.charAt(0) !== '_'; });
+  }
+
+  function renderTable(table, rows, type){
+    if(!rows || rows.length === 0){ table.innerHTML = '<tr><td>아직 신청 내역이 없습니다.</td></tr>'; return; }
+    var headers = displayableHeaders(rows[0]);
+    var html = '<tr>' + headers.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '<th>삭제</th></tr>';
+    rows.forEach(function(row){
+      var cells = headers.map(function(h){
+        var v = row[h];
+        return '<td>' + (v === undefined || v === null ? '' : formatDateDisplay(h, v)) + '</td>';
+      }).join('');
+      // [2026-08-04 추가] 건별 삭제 버튼. data-row에 실제 시트 행 번호(_row)를 담아두고,
+      // 확인창에 보여줄 이름은 흔히 쓰이는 이름 컬럼들 중 있는 값을 그대로 사용함.
+      var label = row['이름'] || row['참가학생 이름'] || row['신청자명(학생명)'] || row['학생이름'] || '';
+      cells += '<td><button type="button" class="row-del-btn" data-type="' + type +
+        '" data-row="' + row._row + '" data-label="' + String(label).replace(/"/g, '&quot;') + '">삭제</button></td>';
+      html += '<tr>' + cells + '</tr>';
+    });
+    table.innerHTML = html;
+    table.querySelectorAll('.row-del-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        deleteSubmission(btn.dataset.type, btn.dataset.row, btn.dataset.label);
+      });
+    });
+  }
+
+  // ===== CSV 다운로드 =====
+  // [2026-08-04 추가] 지금 화면에 불러와져 있는 신청 목록(state.rows)을 그대로 CSV 파일로
+  // 내려받습니다. 날짜/시각 값도 표에 보이는 것과 동일하게 정리해서 내보내고, 엑셀에서 한글이
+  // 깨지지 않도록 파일 맨 앞에 UTF-8 BOM을 붙입니다.
+  function csvEscape(value){
+    var s = String(value === undefined || value === null ? '' : value);
+    if(/[",\n\r]/.test(s)){
+      s = '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  function rowsToCsv(rows){
+    if(!rows || !rows.length) return '';
+    var headers = displayableHeaders(rows[0]);
+    var lines = [headers.map(csvEscape).join(',')];
+    rows.forEach(function(row){
+      lines.push(headers.map(function(h){
+        return csvEscape(formatDateDisplay(h, row[h]));
+      }).join(','));
+    });
+    return lines.join('\r\n');
+  }
+
+  function downloadCsv(type){
+    var rows = state.rows[type];
+    if(!rows || !rows.length){
+      alert('다운로드할 신청 내역이 없습니다. 먼저 목록을 불러온 뒤 다시 시도해주세요.');
+      return;
+    }
+    var csv = rowsToCsv(rows);
+    var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var venueLabel = VENUE_NAMES[state.venueKey] || state.venueKey || '승마장';
+    var typeLabel = type === 'pony' ? '포니등급목록' : (type === 'classtime' ? '수업시간목록' : '보험가입목록');
+    var today = new Date();
+    var stamp = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = venueLabel + '_' + typeLabel + '_' + stamp + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('downloadInsuranceBtn').addEventListener('click', function(){ downloadCsv('insurance'); });
+  document.getElementById('downloadPonyBtn').addEventListener('click', function(){ downloadCsv('pony'); });
+  document.getElementById('downloadClassTimeBtn').addEventListener('click', function(){ downloadCsv('classtime'); });
+
+  // ===== 건별 삭제 / 전체 초기화 =====
+  // [2026-08-04 추가] 학생이 이미 수료했거나 사업이 끝난 뒤, 시트에 직접 들어가지 않고도
+  // 관리자 화면에서 바로 신청 1건을 지우거나(deleteSubmission) 목록 전체를 비울 수 있게(clearAllSubmissions) 함.
+  // 되돌릴 수 없는 작업이라 confirm()으로 한 번(전체 초기화는 두 번) 확인을 받습니다.
+  function deleteSubmission(type, rowIndex, label){
+    var typeLabel = type === 'pony' ? '포니등급' : (type === 'classtime' ? '수업시간' : '보험가입');
+    var displayName = label ? ('"' + label + '" ') : '';
+    if(!confirm(displayName + typeLabel + ' 신청 1건을 삭제할까요? 이 작업은 되돌릴 수 없습니다.')) return;
+    postForm(state.adminUrl, { action:'adminDeleteSubmission', idToken: state.idToken, type: type, row: rowIndex })
+      .then(function(data){
+        if(!data.ok){ alert(data.error || '삭제에 실패했습니다.'); return; }
+        loadSubmissions(type);
+      })
+      .catch(function(err){ alert('통신 오류: ' + err); });
+  }
+
+  function clearAllSubmissions(type){
+    var typeLabel = type === 'pony' ? '포니등급' : (type === 'classtime' ? '수업시간' : '보험가입');
+    if(!confirm(typeLabel + ' 신청 내역을 전부 삭제할까요? 이 작업은 되돌릴 수 없고, 삭제된 데이터는 복구할 수 없습니다.')) return;
+    if(!confirm('정말로 전체 삭제하시겠습니까? 다시 한번 확인해주세요.')) return;
+    postForm(state.adminUrl, { action:'adminClearSubmissions', idToken: state.idToken, type: type })
+      .then(function(data){
+        if(!data.ok){ alert(data.error || '초기화에 실패했습니다.'); return; }
+        loadSubmissions(type);
+      })
+      .catch(function(err){ alert('통신 오류: ' + err); });
+  }
+
+  document.getElementById('clearInsuranceBtn').addEventListener('click', function(){ clearAllSubmissions('insurance'); });
+  document.getElementById('clearPonyBtn').addEventListener('click', function(){ clearAllSubmissions('pony'); });
+  document.getElementById('clearClassTimeBtn').addEventListener('click', function(){ clearAllSubmissions('classtime'); });
+</script>
+</body>
+</html>
