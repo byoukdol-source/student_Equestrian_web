@@ -1408,7 +1408,7 @@
       <span class="tag">${v.name}</span>
       <h2>포니등급신청</h2>
      ${courseInfoLineHtml()}      <p class="sub">아래 정보를 입력 후 접수하기를 눌러주세요.</p>
-       ${v.ponyNotice ? \<p class="note" style="color:var(--danger);font-weight:700;">${escAttr(v.ponyNotice)}</p>` : ''} <form id="ponyForm" onsubmit="return submitPony(event)">`
+       ${v.ponyNotice ? `<p class="note" style="color:var(--danger);font-weight:700;">${escAttr(v.ponyNotice)}</p>` : ''}      <form id="ponyForm" onsubmit="return submitPony(event)">
           <label>신청자명(학생명)</label><input type="text" id="ponyName" placeholder="이름을 입력해 주세요" value="${winnerInfo ? escAttr(winnerInfo.name) : ''}">
           <label>생년월일</label>
           <div class="input-triplet">${tripletHtml('ponyBirth', [4,2,2], ['YYYY','MM','DD'], winnerInfo && winnerInfo.birth ? winnerInfo.birth.split('-') : null)}</div>
