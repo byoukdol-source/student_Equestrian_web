@@ -94,7 +94,7 @@ exports.handler = async (event) => {
           school: winner.school,
           status: winner.status,
           winClass: winner.winClass,
-          ponyGrade: winner.ponyGrade,
+           ponyGrade: winner.ponyGrade,      course: winner.course,
         });
       }
       return jsonResponse({ found: false });
