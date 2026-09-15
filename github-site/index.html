@@ -1358,7 +1358,7 @@
       fetchClassTimeClaim(v, studentInfo).then(result => {
         if(!isScreenActive('insurance') || selectedVenueKey !== venueKeyAtCall) return;
         const wrap = document.getElementById('alreadySubmittedClassTimeWrap');
-        if(!wrap || !result.claimed) return;
+        if(!wrap) return; if(!result.claimed){ wrap.innerHTML = `<p class="note" style="margin-top:12px;color:#d64545;font-weight:700;">아직 수업시간을 선택하지 않으셨습니다.</p><button type="button" class="btn secondary" id="goClassTimeBtn" style="margin-top:8px;">수업시간 선택하기</button>`; document.getElementById('goClassTimeBtn').addEventListener('click', () => renderClassTimeBooking(document.querySelector('.screen[data-screen="insurance"] .card'), v, studentInfo)); return; }
         wrap.innerHTML = `<p class="sub" style="margin-top:12px;">선택한 수업시간 : <b>${escAttr(result.slot)}</b></p>`;
       });
     }
