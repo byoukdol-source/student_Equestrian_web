@@ -1310,7 +1310,7 @@
     let html = `<div class="card">
       <span class="tag">${v.name}</span>
       <h2>보험가입</h2>
-      <p class="sub">${v.insuranceDesc}</p>
+      <p class="sub">${v.insuranceDesc}</p>      ${v.classTimeBooking ? `<p class="note" style="color:var(--primary);font-weight:700;">※ 제출 후 이어서 수업시간을 선착순으로 선택하실 수 있습니다.</p>` : ''}
 
         <form id="insuranceForm" onsubmit="return submitInsurance(event)">
           <p class="subtitle">참가학생</p>
