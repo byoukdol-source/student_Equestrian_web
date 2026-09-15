@@ -1834,7 +1834,7 @@
           const certLine = hasPonyCertification() ? `<br>인증서 : <b>${winnerInfo.ponyGrade}</b>` : '';
           const isWinnerStatus = getStudentCategory() !== null;
           const winnerMoveNote = isWinnerStatus ? `<br><span style="color:var(--danger);font-weight:800;">*보험가입으로 이동해주세요.</span><button type="button" class="move-btn-inline" onclick="showScreen('insurance')">이동하기</button>` : '';
-          text.innerHTML = `🎉 당첨을 축하합니다!<br>이름 : <b>${name}</b><br>학교 : <b>${escAttr(winnerInfo.school)}</b><br>배정 승마장 : <b>${venues[selectedVenueKey].name}</b><br>당첨반 : <b>${data.winClass || '-'}</b><br>과정 : <b>${escAttr(winnerInfo.course) || '-'}</b><br>진행상황 : <b>${data.status || '-'}</b>${certLine}${winnerMoveNote}`;
+          text.innerHTML = `🎉 당첨을 축하합니다!<br>이름 : <b>${name}</b><br>학교 : <b>${escAttr(winnerInfo.school)}</b><br>배정 승마장 : <b>${venues[selectedVenueKey].name}</b><br>당첨반 : <b>${data.winClass || '-'}</b><br>과정 : <b>${escAttr(winnerInfo.course) || '-'}</b>${certLine}${winnerMoveNote}`;
         } else {
           text.innerHTML = `명단에서 <b>${name}</b>님을 찾지 못했어요. 이름·생년월일을 다시 확인해주시거나, 담당자에게 문의해주세요.`;
         }
